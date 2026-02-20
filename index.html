@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Virtual Tabletop</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Left Sidebar -->
+    <div class="sidebar" id="leftSidebar">
+        <div class="sidebar-header">
+            <h1>🎲 D&D VTT</h1>
+            <p class="info-text">Virtual Tabletop</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="vtt.pasteFromClipboard()">
+                📋 Paste Image (Ctrl+V)
+            </button>
+            <button class="btn" onclick="vtt.clearCanvas()">
+                🗑️ Clear Canvas
+            </button>
+            <button class="btn" onclick="vtt.saveProject()">
+                💾 Save Project
+            </button>
+            <button class="btn" onclick="vtt.loadProject()">
+                📂 Load Project
+            </button>
+        </div>
+
+        <div class="assets-container">
+            <div class="assets-header">📦 Assets</div>
+            <input type="text" id="assetSearch" class="asset-search" placeholder="🔍 ค้นหา assets..." oninput="vtt.filterAssets(this.value)">
+            <div id="assetsList"></div>
+        </div>
+    </div>
+
+    <!-- Right Sidebar -->
+    <div class="right-sidebar" id="rightSidebar">
+        <div class="layers-header">🎨 Layers</div>
+        <div class="layers-container" id="layersList"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Canvas Area -->
+        <div class="canvas-container" id="canvasContainer">
+            <canvas id="mainCanvas"></canvas>
+            
+            <!-- Canvas Controls -->
+            <div class="canvas-controls">
+                <button class="canvas-control-btn" onclick="vtt.undoDrawing()" title="Undo Drawing (Ctrl+Z)">
+                    ↶
+                </button>
+                <button class="canvas-control-btn" onclick="vtt.zoomIn()" title="Zoom In (Scroll Up)">
+                    🔍+
+                </button>
+                <button class="canvas-control-btn" onclick="vtt.zoomOut()" title="Zoom Out (Scroll Down)">
+                    🔍-
+                </button>
+                <button class="canvas-control-btn" onclick="vtt.resetView()" title="Reset View">
+                    🎯
+                </button>
+                <button class="canvas-control-btn" id="gridToggle" onclick="vtt.toggleGrid()" title="Toggle Grid">
+                    ❤️
+                </button>
+                <div class="zoom-display" id="zoomDisplay">100%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Toggle Buttons -->
+    <button class="sidebar-toggle sidebar-toggle-left" id="leftToggle" onclick="vtt.toggleLeftSidebar()">
+        ◀
+    </button>
+    <button class="sidebar-toggle sidebar-toggle-right" id="rightToggle" onclick="vtt.toggleRightSidebar()">
+        ▶
+    </button>
+
+    <!-- Mobile Top Controls -->
+    <div class="mobile-top-controls">
+        <button class="mobile-btn" onclick="vtt.pasteFromClipboard()">📋 Paste</button>
+        <button class="mobile-btn" onclick="vtt.clearCanvas()">🗑️ Clear</button>
+        <button class="mobile-btn" onclick="vtt.saveProject()">💾 Save</button>
+        <button class="mobile-btn" onclick="vtt.loadProject()">📂 Load</button>
+    </div>
+
+    <!-- Bottom Drawing Tools Panel -->
+    <div class="bottom-tools-panel" id="bottomToolsPanel">
+        <div class="tools-section">
+            <div class="tool-buttons-horizontal">
+                <button class="tool-btn-bottom active" id="tool-select" onclick="vtt.setTool('select')" title="Select (S)">
+                    👆
+                </button>
+                <button class="tool-btn-bottom" id="tool-pan" onclick="vtt.setTool('pan')" title="Move Canvas">
+                    ✋
+                </button>
+                <button class="tool-btn-bottom" id="tool-pen" onclick="vtt.setTool('pen')" title="Pen (D)">
+                    ✏️
+                </button>
+                <button class="tool-btn-bottom" id="tool-line" onclick="vtt.setTool('line')" title="Line (1)">
+                    📏
+                </button>
+                <button class="tool-btn-bottom" id="tool-ruler" onclick="vtt.setTool('ruler')" title="Ruler (R)">
+                    📐
+                </button>
+                <button class="tool-btn-bottom" id="tool-rect" onclick="vtt.setTool('rect')" title="Rectangle (3)">
+                    ⬜
+                </button>
+                <button class="tool-btn-bottom" id="tool-circle" onclick="vtt.setTool('circle')" title="Circle (2)">
+                    ⭕
+                </button>
+                <button class="tool-btn-bottom" id="tool-eraser" onclick="vtt.setTool('eraser')" title="Eraser (E)">
+                    🧹
+                </button>
+            </div>
+        </div>
+        
+        <div class="tools-settings">
+            <div class="setting-group">
+                <label>Color</label>
+                <input type="color" id="drawColor" value="#ff0000" class="color-input">
+            </div>
+            <div class="setting-group">
+                <label>Size: <span id="brushSizeValue">5</span></label>
+                <input type="range" id="brushSize" min="1" max="50" value="5" oninput="vtt.updateBrushSize(this.value)">
+            </div>
+            <div class="setting-group">
+                <label>Opacity: <span id="opacityValue">100%</span></label>
+                <input type="range" id="drawOpacity" min="10" max="100" value="100" oninput="vtt.updateOpacity(this.value)">
+            </div>
+            <button class="clear-draw-btn" onclick="vtt.clearDrawing()">🗑️ Clear</button>
+        </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="contextMenu" class="context-menu">
+        <div class="context-menu-item" onclick="vtt.renameSelected()">
+            <span>✏️</span>
+            <span>Rename</span>
+        </div>
+        <div class="context-menu-item" onclick="vtt.duplicateSelected()">
+            <span>📋</span>
+            <span>Duplicate</span>
+        </div>
+        <div class="context-menu-item" onclick="vtt.toggleToken()">
+            <span>🎭</span>
+            <span id="tokenText">Set as Token</span>
+        </div>
+        <div class="context-menu-item" onclick="vtt.showRollDialog()">
+            <span>🎲</span>
+            <span>Roll Dice</span>
+        </div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" onclick="vtt.setDisplayName()">
+            <span>🏷️</span>
+            <span>Set Display Name</span>
+        </div>
+        <div class="context-menu-item" onclick="vtt.setHP()">
+            <span>❤️</span>
+            <span>Set HP</span>
+        </div>
+        <div class="context-menu-item" onclick="vtt.editNote()">
+            <span>📖</span>
+            <span>Edit Note</span>
+        </div>
+        <div class="context-menu-item" onclick="vtt.toggleLock()">
+            <span>🔒</span>
+            <span id="lockText">Lock/Unlock</span>
+        </div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" onclick="vtt.bringToFront()">
+            <span>⬆️</span>
+            <span>Bring to Front</span>
+        </div>
+        <div class="context-menu-item" onclick="vtt.sendToBack()">
+            <span>⬇️</span>
+            <span>Send to Back</span>
+        </div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item danger" onclick="vtt.deleteSelected()">
+            <span>🗑️</span>
+            <span>Delete Selected</span>
+        </div>
+    </div>
+
+    <!-- Rename Modal -->
+    <div id="renameModal" class="modal">
+        <div class="modal-content">
+            <h2>✏️ Rename Image</h2>
+            <input type="text" id="imageNameInput" placeholder="Enter new name" onkeypress="if(event.key==='Enter') vtt.confirmRename()">
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" onclick="vtt.confirmRename()">ยืนยัน</button>
+                <button class="modal-btn modal-btn-secondary" onclick="vtt.cancelRename()">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Note Editor Modal -->
+    <div id="noteModal" class="modal">
+        <div class="modal-content note-modal-content">
+            <h2>📖 Edit Note</h2>
+            <textarea id="noteTextarea" placeholder="พิมพ์ข้อความ note ที่นี่...&#10;เช่น: Items in this chest:&#10;- Health Potion x3&#10;- Gold coins x50&#10;- Magic sword"></textarea>
+            <div class="note-size-controls">
+                <label>ขนาด Note:</label>
+                <div class="size-buttons">
+                    <button class="size-btn" onclick="vtt.setNoteSize('small')">เล็ก</button>
+                    <button class="size-btn" onclick="vtt.setNoteSize('medium')">กลาง</button>
+                    <button class="size-btn" onclick="vtt.setNoteSize('large')">ใหญ่</button>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" onclick="vtt.confirmNote()">ยืนยัน</button>
+                <button class="modal-btn modal-btn-secondary" onclick="vtt.cancelNote()">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Display Name Modal -->
+    <div id="displayNameModal" class="modal">
+        <div class="modal-content">
+            <h2>🏷️ Set Display Name</h2>
+            <input type="text" id="displayNameInput" placeholder="ชื่อที่จะแสดงใต้รูป (ว่างเปล่า = ไม่แสดง)" onkeypress="if(event.key==='Enter') vtt.confirmDisplayName()">
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" onclick="vtt.confirmDisplayName()">ยืนยัน</button>
+                <button class="modal-btn modal-btn-secondary" onclick="vtt.cancelDisplayName()">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HP Modal -->
+    <div id="hpModal" class="modal">
+        <div class="modal-content">
+            <h2>❤️ Set HP</h2>
+            <div class="hp-inputs">
+                <div class="hp-input-group">
+                    <label>Current HP</label>
+                    <input type="number" id="currentHPInput" min="0" placeholder="0">
+                </div>
+                <div class="hp-input-group">
+                    <label>Max HP</label>
+                    <input type="number" id="maxHPInput" min="0" placeholder="0">
+                </div>
+            </div>
+            <p class="info-text">ถ้าทั้งคู่เป็น 0 จะไม่แสดง HP bar</p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" onclick="vtt.confirmHP()">ยืนยัน</button>
+                <button class="modal-btn modal-btn-secondary" onclick="vtt.cancelHP()">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dice Roll Modal -->
+    <div id="rollModal" class="modal">
+        <div class="modal-content">
+            <h2>🎲 Roll Dice</h2>
+            <div class="roll-input-group">
+                <label>Dice Formula (e.g., 1d20+2, 2d6-1, 1d20)</label>
+                <input type="text" id="rollFormulaInput" placeholder="1d20+0" value="1d20+0" onkeypress="if(event.key==='Enter') vtt.confirmRoll()">
+            </div>
+            <p class="info-text">Format: [count]d[sides][+/-][modifier]</p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" onclick="vtt.confirmRoll()">🎲 Roll!</button>
+                <button class="modal-btn modal-btn-secondary" onclick="vtt.cancelRoll()">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
